@@ -1,303 +1,225 @@
 # CryptoDataGet-Binance
 
-币安加密货币市场数据获取工具集 - 基于 Binance API 的高效数据采集方案
+A comprehensive Binance market data collection toolkit — efficient crypto data acquisition based on the official Binance API.
 
-## 项目概述
+---
 
-本项目是一个完整的加密货币市场数据收集工具包，专为 Binance 交易所设计。支持获取和存储 K 线（蜡烛图）、期权、订单簿和资金费率数据，采用 Apache Feather 格式实现高效的 pandas DataFrame 序列化。
+## Overview
 
-## 功能模块
+CryptoDataGet-Binance is a modular data pipeline for collecting and storing cryptocurrency market data from Binance. It supports spot klines, options, order book snapshots, trade history, aggregated trades, and funding rates, with Apache Feather as the default storage format for fast pandas DataFrame serialization.
 
-### 📊 CoinKline - K线数据获取
+---
 
-现货市场 K 线数据模块，支持多时间粒度：
+## Modules
 
-- **1分钟线**: 高频交易数据
-- **1小时线**: 中周期分析数据
-- **日线**: 长期趋势数据
+### CoinKline — Spot Kline Data
 
-**主要脚本**:
+Fetches OHLCV candlestick data across multiple timeframes:
+
+- 1-minute (high-frequency)
+- 1-hour (mid-frequency)
+- Daily (long-term trend)
+
 ```bash
 python CoinKline/GetCoinsKline.py
 ```
 
-### 📈 CoinOptions - 期权数据获取
+### CoinOptions — Options Market Data
 
-期权市场数据模块，包含：
+Collects options market data including:
 
-- 期权 K 线数据
-- 历史成交数据
-- 期权链信息
+- Options kline data
+- Historical trade records
+- Options chain information
 
-**主要脚本**:
 ```bash
-# 获取期权历史成交数据（串行版本）
 python CoinOptions/GetHistoricalTradesData_serial.py
 ```
 
-### 📚 CoinOrderbook - 订单簿数据获取
+### CoinOrderbook — Order Book & Trade Data
 
-订单簿深度数据模块，支持：
+Captures order book and trade data:
 
-- **深度数据**: 买卖盘快照
-- **历史成交**: 逐笔成交记录
-- **聚合成交**: 合并后的成交数据（支持代理轮换）
+- **Depth snapshots** — bid/ask order book
+- **Historical trades** — tick-by-tick records
+- **Aggregated trades** — merged trade data with proxy rotation support
 
-**主要脚本**:
 ```bash
-# 聚合成交数据（使用 Clash 代理轮换）
+# Aggregated trades with Clash proxy rotation
 python CoinOrderbook/GetAggTradesData_ms.py
 
-# Feather 文件合并工具
+# Merge feather files
 python CoinOrderbook/feather_utils.py
 ```
 
-### 💰 fundingrate - 资金费率数据
+### fundingrate — Funding Rate History
 
-资金费率历史数据模块，覆盖：
+Collects historical funding rates across:
 
-- **USDS-M**: USDT 本位合约
-- **Coin-M**: 币本位合约
-- **Hyperliquid**: 跨平台资金费率
+- **USDS-M** — USDT-margined perpetuals
+- **Coin-M** — Coin-margined perpetuals
+- **Hyperliquid** — cross-platform funding rates
 
-**主要脚本**:
 ```bash
 python fundingrate/GetFundingRateHistory.py
 ```
 
-## 架构设计
+---
 
-### 模块结构
+## Project Structure
 
 ```
 CryptoDataGet-Binance/
-├── CoinKline/              # 现货 K 线数据
+├── CoinKline/                          # Spot OHLCV data
 │   ├── GetCoinsKline.py
 │   └── Settings.py
-├── CoinOptions/            # 期权数据
+├── CoinOptions/                        # Options market data
 │   ├── GetHistoricalTradesData_serial.py
 │   └── Settings.py
-├── CoinOrderbook/          # 订单簿数据
+├── CoinOrderbook/                      # Order book & trade data
 │   ├── GetAggTradesData_ms.py
 │   ├── feather_utils.py
 │   └── Settings.py
-├── fundingrate/            # 资金费率数据
+├── fundingrate/                        # Funding rate history
 │   ├── GetFundingRateHistory.py
 │   └── Settings.py
+├── export_spot_filtered_to_csv.py      # Export spot data to CSV
+├── merge_feather_files.py              # Merge feather files utility
+├── check.py
+├── Settings.py                         # Global config
 └── requirements.txt
 ```
 
-### 核心设计模式
+---
 
-#### 1. Settings-per-Module
+## Installation
 
-每个模块拥有独立的 `Settings.py`，包含：
-
-- `api_dic`: Binance API 认证信息
-- `data_path`: 数据输出目录（绝对路径，如 `E:\Quant\data\...`）
-- `CONFIG_PATHS`: 运行时目录配置（日志、临时文件）
-- 模块专属配置字典（如 `DEPTH_CONFIG`, `TRADES_CONFIG`）
-
-#### 2. Feather 文件格式
-
-默认使用 Apache Feather 格式存储，优势：
-
-- 高效的 DataFrame 序列化/反序列化
-- 跨语言兼容性
-- 支持 CSV 作为降级方案
-
-#### 3. 增量数据更新
-
-- 历史成交数据使用 `fromId` 分页机制
-- 本地维护最大 ID 跟踪
-- 文件名包含时间范围：`{symbol}_historical_trades_{start}_to_{end}.feather`
-- `feather_utils.py` 提供文件合并管理工具
-
-#### 4. API 速率限制
-
-所有模块实现请求间隔控制（默认 0.2 秒），避免触发 Binance API 限制（大多数端点 400 请求/分钟）。
-
-## 安装指南
-
-### 环境要求
-
-- Python 3.8+
-- Windows/Linux/macOS
-
-### 安装依赖
+**Requirements:** Python 3.8+
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 核心依赖
+| Package | Version | Purpose |
+|---|---|---|
+| binance-connector | >=3.12.0 | Official Binance API client |
+| pandas | >=1.5.0 | Data processing and Feather I/O |
+| pytz | >=2023.3 | Timezone handling (Asia/Hong_Kong) |
+| schedule | >=1.2.0 | Scheduled task execution |
+| tqdm | >=4.65.0 | Progress bars for long-running tasks |
 
-| 包名 | 版本 | 用途 |
-|------|------|------|
-| binance-connector | >=3.12.0 | 官方 Binance API 客户端 |
-| pandas | >=1.5.0 | 数据处理与 Feather 格式 |
-| pytz | >=2023.3 | 时区处理（Asia/Hong_Kong） |
-| schedule | >=1.2.0 | 定时任务调度 |
-| tqdm | >=4.65.0 | 长任务进度条 |
+---
 
-## 配置说明
+## Configuration
 
-### API 配置
+### API Keys
 
-在每个模块的 `Settings.py` 中配置：
+Edit `Settings.py` in each module (most public market data endpoints work without authentication):
 
 ```python
 api_dic = {
-    'api_key': 'your_api_key_here',
-    'api_secret': 'your_api_secret_here'
+    'api_key': 'YOUR_API_KEY',
+    'api_secret': 'YOUR_API_SECRET'
 }
 ```
 
-> ⚠️ **注意**: 大部分公共市场数据端点无需认证即可访问
-
-### 数据输出路径
-
-在 `Settings.py` 中设置绝对路径：
+### Data Output Paths
 
 ```python
-data_path = "E:\\Quant\\data\\CoinKline"
+data_path = {
+    'result_path_daily': Path(r'E:\Quant\data\CoinKline\daily'),
+    'result_path_min':   Path(r'E:\Quant\data\CoinKline\1min'),
+    # ...
+}
 ```
 
-### 代理配置（CoinOrderbook）
+### Proxy Configuration (CoinOrderbook)
 
-`GetAggTradesData_ms.py` 支持 Clash 代理轮换：
+`GetAggTradesData_ms.py` supports Clash proxy rotation for high-volume downloads:
 
 ```python
 CLASH_PROXY_CONFIG = {
+    'proxy_port': 7897,
     'api_port': 9097,
-    # ... 其他配置
+    'api_secret': 'your_clash_secret',
 }
-REQUIRE_UNIQUE_IP = False  # IP 不足时允许复用
+NUM_PROCESSES = 10       # concurrent download threads
+REQUIRE_UNIQUE_IP = False  # allow IP reuse if not enough nodes
 ```
 
-## 使用示例
+---
 
-### K 线数据获取
+## Usage
+
+### Fetch Kline Data
 
 ```python
 from CoinKline.GetCoinsKline import get_kline_data
 
-# 获取 BTCUSDT 1小时数据
-data = get_kline_data(
-    symbol="BTCUSDT",
-    interval="1h",
-    limit=1000
-)
+data = get_kline_data(symbol="BTCUSDT", interval="1h", limit=1000)
 ```
 
-### Feather 文件操作
+### Read & Merge Feather Files
 
 ```python
-from CoinOrderbook.feather_utils import (
-    read_all_feather_files,
-    merge_with_existing_and_save
-)
+from CoinOrderbook.feather_utils import read_all_feather_files, merge_with_existing_and_save
 from pathlib import Path
 
-# 读取某币种所有 feather 文件
 df = read_all_feather_files(
-    Path("E:/Quant/data/CoinOrderbook/现货历史成交数据"),
+    Path("E:/Quant/data/CoinOrderbook/historical_trades"),
     "BTCUSDT"
 )
 
-# 合并新数据并保存
-merge_with_existing_and_save(
-    data_dir,
-    symbol,
-    new_df,
-    save_format='feather'
-)
+merge_with_existing_and_save(data_dir, symbol, new_df, save_format='feather')
 ```
 
-### 导出为 CSV
+### Utility Scripts
 
-```python
-# 导出现货数据到 CSV
-python export_spot_filtered_to_csv.py
-
-# 合并多个 feather 文件
-python merge_feather_files.py
+```bash
+python export_spot_filtered_to_csv.py   # export spot data to CSV
+python merge_feather_files.py           # merge multiple feather files
 ```
 
-## 数据输出结构
+---
 
-数据默认输出到 `E:\Quant\data\`（可在 Settings.py 中配置）：
+## Data Output Structure
 
 ```
 E:/Quant/data/
-├── CoinKline/              # 现货 OHLCV 数据
+├── CoinKline/
 │   ├── 1min/
 │   ├── 1h/
 │   └── daily/
-├── CoinOptions/            # 期权市场数据
+├── CoinOptions/
 │   ├── kline/
 │   └── historical_trades/
-├── CoinOrderbook/          # 订单簿快照和成交历史
+├── CoinOrderbook/
 │   ├── depth/
 │   ├── trades/
 │   └── agg_trades/
-└── fundingrate/            # 资金费率历史
+└── fundingrate/
     ├── usds_m/
     └── coin_m/
 ```
 
-## 文件命名规范
-
-- **历史成交数据**: `{symbol}_historical_trades_{YYYYMMDD}_{HHMMSS}_to_{YYYYMMDD}_{HHMMSS}.feather`
-- **配置文件**: 运行时创建 `config/{logs,runtime,data,output}/` 目录
-- **币种池**: CSV 文件缓存在 `data/symbol_pool/`
-
-## 开发说明
-
-### 运行单元模块
-
-```bash
-# K 线数据（每日更新）
-python CoinKline/GetCoinsKline.py
-
-# 期权历史成交
-python CoinOptions/GetHistoricalTradesData_serial.py
-
-# 订单簿聚合成交（使用 Clash 代理）
-python CoinOrderbook/GetAggTradesData_ms.py
-
-# 资金费率历史
-python fundingrate/GetFundingRateHistory.py
-```
-
-### 工具脚本
-
-```bash
-# 按日期合并 feather 文件
-python CoinOrderbook/feather_utils.py
-
-# 导出现货数据为 CSV
-python export_spot_filtered_to_csv.py
-
-# 合并多个 feather 文件
-python merge_feather_files.py
-```
-
-## 注意事项
-
-1. **API 限制**: 请遵守 Binance API 速率限制，避免 IP 被封禁
-2. **数据存储**: Feather 文件不适合长期归档，建议定期转换为 Parquet 格式
-3. **代理使用**: 大量数据获取时建议使用代理池分散请求
-4. **时区处理**: 所有时间戳默认使用 Asia/Hong_Kong 时区
-
-## 许可证
-
-MIT License
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request。
+**File naming convention:**
+`{symbol}_historical_trades_{YYYYMMDD}_{HHMMSS}_to_{YYYYMMDD}_{HHMMSS}.feather`
 
 ---
 
-**免责声明**: 本项目仅供学习和研究使用，不构成任何投资建议。使用本工具获取的数据进行交易决策风险自负。
+## Design Notes
+
+- **Per-module Settings** — each module has its own `Settings.py` for independent configuration
+- **Incremental updates** — historical trades use `fromId` pagination with local max-ID tracking
+- **Rate limiting** — all modules enforce request intervals (default 0.2s) to stay within Binance's 400 req/min limit
+- **Feather format** — fast serialization for active research; consider converting to Parquet for long-term archival
+
+---
+
+## License
+
+MIT
+
+---
+
+> **Disclaimer:** This project is for research and educational purposes only. It does not constitute investment advice. Use at your own risk.
